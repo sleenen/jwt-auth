@@ -33,4 +33,14 @@ class Expiration extends Claim
             throw new TokenExpiredException('Token has expired');
         }
     }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function validateRefresh($refreshTTL)
+    {
+        if ($this->isPast($this->getValue() + $refreshTTL * 60)) {
+            throw new TokenExpiredException('Token has expired and can no longer be refreshed');
+        }
+    }
 }
