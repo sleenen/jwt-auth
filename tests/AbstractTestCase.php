@@ -11,6 +11,7 @@
 
 namespace Tymon\JWTAuth\Test;
 
+use Mockery;
 use Carbon\Carbon;
 use PHPUnit\Framework\TestCase;
 
@@ -25,15 +26,14 @@ abstract class AbstractTestCase extends TestCase
     {
         parent::setUp();
 
-        $now = Carbon::now();
-
-        Carbon::setTestNow($now);
+        Carbon::setTestNow($now = Carbon::now());
         $this->testNowTimestamp = $now->getTimestamp();
     }
 
     public function tearDown()
     {
         Carbon::setTestNow();
+        Mockery::close();
 
         parent::tearDown();
     }

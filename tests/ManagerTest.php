@@ -62,15 +62,7 @@ class ManagerTest extends AbstractTestCase
         $this->blacklist = Mockery::mock(Blacklist::class);
         $this->factory = Mockery::mock(Factory::class);
         $this->manager = new Manager($this->jwt, $this->blacklist, $this->factory);
-
         $this->validator = Mockery::mock(PayloadValidator::class);
-    }
-
-    public function tearDown()
-    {
-        Mockery::close();
-
-        parent::tearDown();
     }
 
     /** @test */
@@ -132,6 +124,7 @@ class ManagerTest extends AbstractTestCase
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\TokenBlacklistedException
+     * @expectedExceptionMessage The token has been blacklisted
      */
     public function it_should_throw_exception_when_token_is_blacklisted()
     {
@@ -257,6 +250,7 @@ class ManagerTest extends AbstractTestCase
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\JWTException
+     * @expectedExceptionMessage You must have the blacklist enabled to invalidate a token.
      */
     public function it_should_throw_an_exception_when_enable_blacklist_is_set_to_false()
     {

@@ -16,16 +16,22 @@ use Illuminate\Http\Request;
 class Parser
 {
     /**
+     * The chain.
+     *
      * @var array
      */
     private $chain;
 
     /**
+     * The request.
+     *
      * @var \Illuminate\Http\Request
      */
     protected $request;
 
     /**
+     * Constructor.
+     *
      * @param  \Illuminate\Http\Request  $request
      * @param  array  $chain
      *
@@ -82,9 +88,7 @@ class Parser
     public function parseToken()
     {
         foreach ($this->chain as $parser) {
-            $response = $parser->parse($this->request);
-
-            if ($response !== null) {
+            if ($response = $parser->parse($this->request)) {
                 return $response;
             }
         }

@@ -22,13 +22,12 @@ use Tymon\JWTAuth\Claims\IssuedAt;
 use Tymon\JWTAuth\Claims\NotBefore;
 use Tymon\JWTAuth\Claims\Collection;
 use Tymon\JWTAuth\Claims\Expiration;
-use Tymon\JWTAuth\Test\Fixtures\Foo;
 use Tymon\JWTAuth\Validators\PayloadValidator;
 
 class PayloadTest extends AbstractTestCase
 {
     /**
-     * @var \Mockery\MockInterface
+     * @var \Mockery\MockInterface|\Tymon\JWTAuth\Validators\PayloadValidator
      */
     protected $validator;
 
@@ -72,16 +71,10 @@ class PayloadTest extends AbstractTestCase
         return new Payload($collection, $this->validator);
     }
 
-    public function tearDown()
-    {
-        Mockery::close();
-
-        parent::tearDown();
-    }
-
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\PayloadException
+     * @expectedExceptionMessage The payload is immutable
      */
     public function it_should_throw_an_exception_when_trying_to_add_to_the_payload()
     {
@@ -91,6 +84,7 @@ class PayloadTest extends AbstractTestCase
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\PayloadException
+     * @expectedExceptionMessage The payload is immutable
      */
     public function it_should_throw_an_exception_when_trying_to_remove_a_key_from_the_payload()
     {
@@ -176,6 +170,7 @@ class PayloadTest extends AbstractTestCase
     /**
      * @test
      * @expectedException \BadMethodCallException
+     * @expectedExceptionMessage The claim [getFoo] does not exist on the payload.
      */
     public function it_should_throw_an_exception_when_magically_getting_a_property_that_does_not_exist()
     {

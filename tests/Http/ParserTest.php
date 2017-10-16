@@ -55,7 +55,7 @@ class ParserTest extends AbstractTestCase
         $parser->setChain([
             new QueryString,
             new InputSource,
-            (new AuthHeaders())->setHeaderPrefix('Custom'),
+            (new AuthHeaders)->setHeaderPrefix('Custom'),
             new RouteParams,
         ]);
 
@@ -74,7 +74,7 @@ class ParserTest extends AbstractTestCase
         $parser->setChain([
             new QueryString,
             new InputSource,
-            (new AuthHeaders())->setHeaderName('custom_authorization'),
+            (new AuthHeaders)->setHeaderName('custom_authorization'),
             new RouteParams,
         ]);
 
@@ -374,10 +374,20 @@ class ParserTest extends AbstractTestCase
             new RouteParams,
         ];
 
-        $parser = new Parser(Mockery::mock(Request::class));
+        /* @var \Illuminate\Http\Request $request */
+        $request = Mockery::mock(Request::class);
+
+        $parser = new Parser($request);
         $parser->setChainOrder($chain);
 
         $this->assertSame($parser->getChain(), $chain);
+    }
+
+    /** @test */
+    public function it_should_set_the_cookie_key()
+    {
+        $cookies = (new Cookies)->setKey('test');
+        $this->assertInstanceOf(Cookies::class, $cookies);
     }
 
     protected function getRouteMock($expectedParameterValue = null, $expectedParameterName = 'token')

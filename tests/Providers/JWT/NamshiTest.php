@@ -12,7 +12,9 @@
 namespace Tymon\JWTAuth\Test\Providers\JWT;
 
 use Mockery;
+use Exception;
 use Namshi\JOSE\JWS;
+use InvalidArgumentException;
 use Tymon\JWTAuth\Providers\JWT\Namshi;
 use Tymon\JWTAuth\Test\AbstractTestCase;
 
@@ -35,13 +37,6 @@ class NamshiTest extends AbstractTestCase
         $this->jws = Mockery::mock(JWS::class);
     }
 
-    public function tearDown()
-    {
-        Mockery::close();
-
-        parent::tearDown();
-    }
-
     /** @test */
     public function it_should_return_the_token_when_passing_a_valid_payload_to_encode()
     {
@@ -59,13 +54,14 @@ class NamshiTest extends AbstractTestCase
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\JWTException
+     * @expectedExceptionMessage Could not create token:
      */
     public function it_should_throw_an_invalid_exception_when_the_payload_could_not_be_encoded()
     {
         $payload = ['sub' => 1, 'exp' => $this->testNowTimestamp, 'iat' => $this->testNowTimestamp, 'iss' => '/foo'];
 
         $this->jws->shouldReceive('setPayload')->once()->with($payload)->andReturn(Mockery::self());
-        $this->jws->shouldReceive('sign')->andThrow(new \Exception);
+        $this->jws->shouldReceive('sign')->andThrow(new Exception);
 
         $this->getProvider('secret', 'HS256')->encode($payload);
     }
@@ -79,12 +75,13 @@ class NamshiTest extends AbstractTestCase
         $this->jws->shouldReceive('verify')->once()->with('secret', 'HS256')->andReturn(true);
         $this->jws->shouldReceive('getPayload')->andReturn($payload);
 
-        $this->assertEquals($payload, $this->getProvider('secret', 'HS256')->decode('foo.bar.baz'));
+        $this->assertSame($payload, $this->getProvider('secret', 'HS256')->decode('foo.bar.baz'));
     }
 
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\TokenInvalidException
+     * @expectedExceptionMessage Token Signature could not be verified.
      */
     public function it_should_throw_a_token_invalid_exception_when_the_token_could_not_be_decoded_due_to_a_bad_signature()
     {
@@ -98,10 +95,11 @@ class NamshiTest extends AbstractTestCase
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\TokenInvalidException
+     * @expectedExceptionMessage Could not decode token:
      */
     public function it_should_throw_a_token_invalid_exception_when_the_token_could_not_be_decoded()
     {
-        $this->jws->shouldReceive('load')->once()->with('foo.bar.baz', false)->andThrow(new \InvalidArgumentException());
+        $this->jws->shouldReceive('load')->once()->with('foo.bar.baz', false)->andThrow(new InvalidArgumentException);
         $this->jws->shouldReceive('verify')->never();
         $this->jws->shouldReceive('getPayload')->never();
 
@@ -171,6 +169,7 @@ class NamshiTest extends AbstractTestCase
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\JWTException
+     * @expectedExceptionMessage The given algorithm could not be found
      */
     public function it_should_throw_a_exception_when_the_algorithm_passed_is_invalid()
     {
@@ -178,6 +177,34 @@ class NamshiTest extends AbstractTestCase
         $this->jws->shouldReceive('verify')->with('secret', 'AlgorithmWrong')->andReturn(true);
 
         $this->getProvider('secret', 'AlgorithmWrong')->decode('foo.bar.baz');
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_return_the_public_key()
+    {
+        $provider = $this->getProvider(
+            'does_not_matter',
+            'RS256',
+            $keys = ['private' => $this->getDummyPrivateKey(), 'public' => $this->getDummyPublicKey()]
+        );
+
+        $this->assertSame($keys['public'], $provider->getPublicKey());
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_return_the_keys()
+    {
+        $provider = $this->getProvider(
+            'does_not_matter',
+            'RS256',
+            $keys = ['private' => $this->getDummyPrivateKey(), 'public' => $this->getDummyPublicKey()]
+        );
+
+        $this->assertSame($keys, $provider->getKeys());
     }
 
     public function getProvider($secret, $algo, array $keys = [])

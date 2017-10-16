@@ -12,29 +12,16 @@
 namespace Tymon\JWTAuth\Test\Middleware;
 
 use Mockery;
-use Tymon\JWTAuth\JWTAuth;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Tymon\JWTAuth\Http\Parser\Parser;
 use Tymon\JWTAuth\Test\Stubs\UserStub;
-use Tymon\JWTAuth\Test\AbstractTestCase;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Http\Middleware\AuthenticateAndRenew;
 
-class AuthenticateAndRenewTest extends AbstractTestCase
+class AuthenticateAndRenewTest extends AbstractMiddlewareTest
 {
     /**
-     * @var \Mockery\MockInterface|\Tymon\JWTAuth\JWTAuth
-     */
-    protected $auth;
-
-    /**
-     * @var \Mockery\MockInterface
-     */
-    protected $request;
-
-    /**
-     * @var \Tymon\JWTAuth\Http\Middleware\Authenticate
+     * @var \Tymon\JWTAuth\Http\Middleware\Authenticate|\Tymon\JWTAuth\Http\Middleware\AuthenticateAndRenew
      */
     protected $middleware;
 
@@ -42,17 +29,7 @@ class AuthenticateAndRenewTest extends AbstractTestCase
     {
         parent::setUp();
 
-        $this->auth = Mockery::mock(JWTAuth::class);
-        $this->request = Mockery::mock(Request::class);
-
         $this->middleware = new AuthenticateAndRenew($this->auth);
-    }
-
-    public function tearDown()
-    {
-        Mockery::close();
-
-        parent::tearDown();
     }
 
     /** @test */
@@ -76,9 +53,9 @@ class AuthenticateAndRenewTest extends AbstractTestCase
 
     /**
      * @test
-     * @expectedException \Symfony\Component\HttpKernel\Exception\BadRequestHttpException
+     * @expectedException \Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException
      */
-    public function it_should_throw_a_bad_request_exception_if_token_not_provided()
+    public function it_should_throw_an_unauthorized_exception_if_token_not_provided()
     {
         $parser = Mockery::mock(Parser::class);
         $parser->shouldReceive('hasToken')->once()->andReturn(false);
@@ -87,6 +64,7 @@ class AuthenticateAndRenewTest extends AbstractTestCase
         $this->auth->parser()->shouldReceive('setRequest')->once()->with($this->request)->andReturn($this->auth->parser());
 
         $this->middleware->handle($this->request, function () {
+            //
         });
     }
 
@@ -105,6 +83,7 @@ class AuthenticateAndRenewTest extends AbstractTestCase
         $this->auth->shouldReceive('parseToken->authenticate')->once()->andThrow(new TokenInvalidException);
 
         $this->middleware->handle($this->request, function () {
+            //
         });
     }
 }

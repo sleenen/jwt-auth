@@ -12,7 +12,7 @@
 namespace Tymon\JWTAuth\Test;
 
 use Mockery;
-use StdClass;
+use stdClass;
 use Tymon\JWTAuth\Token;
 use Tymon\JWTAuth\Factory;
 use Tymon\JWTAuth\JWTAuth;
@@ -38,7 +38,7 @@ class JWTAuthTest extends AbstractTestCase
     protected $auth;
 
     /**
-     * @var \Mockery\MockInterface|\Tymon\JWTAuth\Http\Parser
+     * @var \Mockery\MockInterface|\Tymon\JWTAuth\Http\Parser\Parser
      */
     protected $parser;
 
@@ -52,15 +52,7 @@ class JWTAuthTest extends AbstractTestCase
         $this->manager = Mockery::mock(Manager::class);
         $this->auth = Mockery::mock(Auth::class);
         $this->parser = Mockery::mock(Parser::class);
-
         $this->jwtAuth = new JWTAuth($this->manager, $this->auth, $this->parser);
-    }
-
-    public function tearDown()
-    {
-        Mockery::close();
-
-        parent::tearDown();
     }
 
     /** @test */
@@ -72,7 +64,7 @@ class JWTAuthTest extends AbstractTestCase
         $this->manager
              ->shouldReceive('getPayloadFactory->customClaims')
              ->once()
-             ->with(['sub' => 1, 'foo' => 'bar', 'role' => 'admin'])
+             ->with(['sub' => 1, 'prv' => sha1('Tymon\JWTAuth\Test\Stubs\UserStub'), 'foo' => 'bar', 'role' => 'admin'])
              ->andReturn($payloadFactory);
 
         $this->manager->shouldReceive('encode->get')->once()->andReturn('foo.bar.baz');
@@ -80,6 +72,48 @@ class JWTAuthTest extends AbstractTestCase
         $token = $this->jwtAuth->fromUser(new UserStub);
 
         $this->assertSame($token, 'foo.bar.baz');
+    }
+
+    /** @test */
+    public function it_should_pass_provider_check_if_hash_matches()
+    {
+        $payloadFactory = Mockery::mock(Factory::class);
+        $payloadFactory->shouldReceive('make')->andReturn(Mockery::mock(Payload::class));
+        $payloadFactory->shouldReceive('get')
+                       ->with('prv')
+                       ->andReturn(sha1('Tymon\JWTAuth\Test\Stubs\UserStub'));
+
+        $this->manager->shouldReceive('decode')->once()->andReturn($payloadFactory);
+
+        $this->assertTrue($this->jwtAuth->setToken('foo.bar.baz')->checkProvider('Tymon\JWTAuth\Test\Stubs\UserStub'));
+    }
+
+    /** @test */
+    public function it_should_pass_provider_check_if_hash_matches_when_provider_is_null()
+    {
+        $payloadFactory = Mockery::mock(Factory::class);
+        $payloadFactory->shouldReceive('make')->andReturn(Mockery::mock(Payload::class));
+        $payloadFactory->shouldReceive('get')
+                       ->with('prv')
+                       ->andReturnNull();
+
+        $this->manager->shouldReceive('decode')->once()->andReturn($payloadFactory);
+
+        $this->assertTrue($this->jwtAuth->setToken('foo.bar.baz')->checkProvider('Tymon\JWTAuth\Test\Stubs\UserStub'));
+    }
+
+    /** @test */
+    public function it_should_not_pass_provider_check_if_hash_not_match()
+    {
+        $payloadFactory = Mockery::mock(Factory::class);
+        $payloadFactory->shouldReceive('make')->andReturn(Mockery::mock(Payload::class));
+        $payloadFactory->shouldReceive('get')
+                       ->with('prv')
+                       ->andReturn(sha1('Tymon\JWTAuth\Test\Stubs\UserStub1'));
+
+        $this->manager->shouldReceive('decode')->once()->andReturn($payloadFactory);
+
+        $this->assertFalse($this->jwtAuth->setToken('foo.bar.baz')->checkProvider('Tymon\JWTAuth\Test\Stubs\UserStub'));
     }
 
     /** @test */
@@ -91,7 +125,7 @@ class JWTAuthTest extends AbstractTestCase
         $this->manager
              ->shouldReceive('getPayloadFactory->customClaims')
              ->once()
-             ->with(['sub' => 1, 'foo' => 'bar', 'role' => 'admin'])
+             ->with(['sub' => 1, 'prv' => sha1('Tymon\JWTAuth\Test\Stubs\UserStub'), 'foo' => 'bar', 'role' => 'admin'])
              ->andReturn($payloadFactory);
 
         $this->manager->shouldReceive('encode->get')->once()->andReturn('foo.bar.baz');
@@ -119,6 +153,7 @@ class JWTAuthTest extends AbstractTestCase
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\JWTException
+     * @expectedExceptionMessage A token is required
      */
     public function it_should_throw_an_exception_when_not_providing_a_token()
     {
@@ -229,6 +264,7 @@ class JWTAuthTest extends AbstractTestCase
     /**
      * @test
      * @expectedException \Tymon\JWTAuth\Exceptions\JWTException
+     * @expectedExceptionMessage The token could not be parsed from the request
      */
     public function it_should_throw_an_exception_when_token_not_present_in_request()
     {
@@ -248,11 +284,11 @@ class JWTAuthTest extends AbstractTestCase
     /** @test */
     public function it_should_magically_call_the_manager()
     {
-        $this->manager->shouldReceive('getBlacklist')->andReturn(new StdClass);
+        $this->manager->shouldReceive('getBlacklist')->andReturn(new stdClass);
 
-        $blacklist = $this->jwtAuth->getBlacklist();
+        $blacklist = $this->jwtAuth->manager()->getBlacklist();
 
-        $this->assertInstanceOf(StdClass::class, $blacklist);
+        $this->assertInstanceOf(stdClass::class, $blacklist);
     }
 
     /** @test */

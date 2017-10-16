@@ -72,17 +72,18 @@ class JWTGuard implements Guard
             return $this->user;
         }
 
-        if ($this->jwt->getToken() && $this->jwt->check()) {
-            $id = $this->jwt->payload()->get('sub');
-
-            return $this->user = $this->provider->retrieveById($id);
+        if ($this->jwt->setRequest($this->request)->getToken() &&
+            ($payload = $this->jwt->check(true)) &&
+            $this->validateSubject()
+        ) {
+            return $this->user = $this->provider->retrieveById($payload['sub']);
         }
     }
 
     /**
      * Get the currently authenticated user or throws an exception.
      *
-     * @throws UserNotDefinedException
+     * @throws \Tymon\JWTAuth\Exceptions\UserNotDefinedException
      *
      * @return \Illuminate\Contracts\Auth\Authenticatable
      */
@@ -104,7 +105,7 @@ class JWTGuard implements Guard
      */
     public function validate(array $credentials = [])
     {
-        return $this->attempt($credentials, false);
+        return (bool) $this->attempt($credentials, false);
     }
 
     /**
@@ -173,7 +174,7 @@ class JWTGuard implements Guard
      *
      * @param  bool  $forceForever
      *
-     * @return bool
+     * @return \Tymon\JWTAuth\JWT
      */
     public function invalidate($forceForever = false)
     {
@@ -294,6 +295,8 @@ class JWTGuard implements Guard
      * Set the token ttl.
      *
      * @param  int  $ttl
+     *
+     * @return $this
      */
     public function setTTL($ttl)
     {
@@ -381,6 +384,22 @@ class JWTGuard implements Guard
     protected function hasValidCredentials($user, $credentials)
     {
         return $user !== null && $this->provider->validateCredentials($user, $credentials);
+    }
+
+    /**
+     * Ensure the JWTSubject matches what is in the token.
+     *
+     * @return  bool
+     */
+    protected function validateSubject()
+    {
+        // If the provider doesn't have the necessary method
+        // to get the underlying model name then allow.
+        if (! method_exists($this->provider, 'getModel')) {
+            return true;
+        }
+
+        return $this->jwt->checkProvider($this->provider->getModel());
     }
 
     /**

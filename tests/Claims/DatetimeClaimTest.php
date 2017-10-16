@@ -13,6 +13,7 @@ namespace Tymon\JWTAuth\Test\Claims;
 
 use Mockery;
 use DateTime;
+use DateInterval;
 use Carbon\Carbon;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -54,13 +55,6 @@ class DatetimeClaimTest extends AbstractTestCase
             'iat' => new IssuedAt($this->testNowTimestamp),
             'jti' => new JwtId('foo'),
         ];
-    }
-
-    public function tearDown()
-    {
-        Mockery::close();
-
-        parent::tearDown();
     }
 
     /** @test */
@@ -115,7 +109,7 @@ class DatetimeClaimTest extends AbstractTestCase
     /** @test */
     public function it_should_handle_datetime_immutable_claims()
     {
-        $testDateTimeImmutable = DateTimeImmutable::createFromFormat('U', $this->testNowTimestamp);
+        $testDateTimeImmutable = DateTimeImmutable::createFromFormat('U', (string) $this->testNowTimestamp);
 
         $this->assertInstanceOf(DateTimeImmutable::class, $testDateTimeImmutable);
         $this->assertInstanceOf(DatetimeInterface::class, $testDateTimeImmutable);
@@ -133,5 +127,27 @@ class DatetimeClaimTest extends AbstractTestCase
         $payloadDatetime = new Payload(Collection::make($claimsDatetime), $this->validator);
 
         $this->assertEquals($payloadTimestamp, $payloadDatetime);
+    }
+
+    /** @test */
+    public function it_should_handle_datetinterval_claims()
+    {
+        $testDateInterval = DateInterval::createFromDateString('PT1H');
+
+        $this->assertInstanceOf(DateInterval::class, $testDateInterval);
+
+        $claimsDateInterval = [
+            'sub' => new Subject(1),
+            'iss' => new Issuer('http://example.com'),
+            'exp' => new Expiration($testDateInterval),
+            'nbf' => new NotBefore($this->testNowTimestamp),
+            'iat' => new IssuedAt($this->testNowTimestamp),
+            'jti' => new JwtId('foo'),
+        ];
+
+        $payloadTimestamp = new Payload(Collection::make($this->claimsTimestamp), $this->validator);
+        $payloadDateInterval = new Payload(Collection::make($claimsDateInterval), $this->validator);
+
+        $this->assertEquals($payloadTimestamp, $payloadDateInterval);
     }
 }

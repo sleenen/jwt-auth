@@ -37,7 +37,7 @@ class BlacklistTest extends AbstractTestCase
     protected $blacklist;
 
     /**
-     * @var \Mockery\MockInterface
+     * @var \Mockery\MockInterface|\Tymon\JWTAuth\Validators\Validator
      */
     protected $validator;
 
@@ -47,15 +47,7 @@ class BlacklistTest extends AbstractTestCase
 
         $this->storage = Mockery::mock(Storage::class);
         $this->blacklist = new Blacklist($this->storage);
-
         $this->validator = Mockery::mock(PayloadValidator::class);
-    }
-
-    public function tearDown()
-    {
-        Mockery::close();
-
-        parent::tearDown();
     }
 
     /** @test */
@@ -142,6 +134,44 @@ class BlacklistTest extends AbstractTestCase
         $this->storage->shouldReceive('get')->with('foobar')->once()->andReturn(['valid_until' => $this->testNowTimestamp]);
 
         $this->assertTrue($this->blacklist->has($payload));
+    }
+
+    public function blacklist_provider()
+    {
+        return [
+            [null],
+            [0],
+            [''],
+            [[]],
+            [['valid_until' => strtotime('+1day')]],
+        ];
+    }
+
+    /**
+     * @test
+     * @dataProvider blacklist_provider
+     *
+     * @param mixed $result
+     */
+    public function it_should_check_whether_a_token_has_not_been_blacklisted($result)
+    {
+        $claims = [
+            new Subject(1),
+            new Issuer('http://example.com'),
+            new Expiration($this->testNowTimestamp + 3600),
+            new NotBefore($this->testNowTimestamp),
+            new IssuedAt($this->testNowTimestamp),
+            new JwtId('foobar'),
+        ];
+
+        $collection = Collection::make($claims);
+
+        $this->validator->shouldReceive('setRefreshFlow->check')->andReturn($collection);
+
+        $payload = new Payload($collection, $this->validator);
+
+        $this->storage->shouldReceive('get')->with('foobar')->once()->andReturn($result);
+        $this->assertFalse($this->blacklist->has($payload));
     }
 
     /** @test */
